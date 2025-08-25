@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "description": "Scraper für WKO Firmenverzeichnisse.",
   "type": "commonjs",
-  "scripts": { "start": "node main.js" },
-  "dependencies": { "apify": "^3.1.8" }
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "apify": "^3.4.4",
+    "crawlee": "^3.14.0"
+  }
 }

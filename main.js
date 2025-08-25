@@ -1,5 +1,6 @@
 // main.js
-const { Actor, PlaywrightCrawler, log, Dataset, RequestQueue } = require('apify');
+const { Actor, log, Dataset, RequestQueue } = require('apify');
+const { PlaywrightCrawler } = require('crawlee');
 
 const SLEEP = (ms) => new Promise((r) => setTimeout(r, ms));
 const clean = (t = '') => t.replace(/\s+/g, ' ').trim();
@@ -50,14 +51,18 @@ const parseCompanyCards = async ({ request, page }) => {
 
 Actor.main(async () => {
     const input = await Actor.getInput() || {};
-    const { locations = [
-        { district: 'bruck-mürzzuschlag', url: 'https://firmen.wko.at/-/bruck-m%C3%BCrzzuschlag_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma=' },
-        { district: 'weiz', url: 'https://firmen.wko.at/-/weiz_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma=' },
-        { district: 'murtal', url: 'https://firmen.wko.at/-/murtal_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma=' },
-        { district: 'leoben', url: 'https://firmen.wko.at/-/leoben_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma=' },
-        { district: 'murau', url: 'https://firmen.wko.at/-/murau_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma=' },
-        { district: 'liezen', url: 'https://firmen.wko.at/-/liezen_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma=' }
-    ], maxConcurrency = 4 } = input;
+    const {
+        locations = [
+            { district: 'bruck-mürzzuschlag', url: 'https://firmen.wko.at/-/bruck-m%C3%BCrzzuschlag_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma=' },
+            { district: 'weiz', url: 'https://firmen.wko.at/-/weiz_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma=' },
+            { district: 'murtal', url: 'https://firmen.wko.at/-/murtal_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma=' },
+            { district: 'leoben', url: 'https://firmen.wko.at/-/leoben_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma=' },
+            { district: 'murau', url: 'https://firmen.wko.at/-/murau_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma=' },
+            { district: 'liezen', url: 'https://firmen.wko.at/-/liezen_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma=' }
+        ],
+        maxConcurrency = 4,
+        proxy = { useApifyProxy: true, apifyProxyCountry: 'AT' }
+    } = input;
 
     const requestQueue = await RequestQueue.open();
     for (const loc of locations) {
@@ -67,6 +72,8 @@ Actor.main(async () => {
     const crawler = new PlaywrightCrawler({
         requestQueue,
         maxConcurrency,
+        proxyConfiguration: await Actor.createProxyConfiguration(proxy),
+        headless: true,
         requestHandler: async ({ request, page }) => {
             const companies = await parseCompanyCards({ request, page });
             for (const c of companies) await Dataset.pushData(c);
