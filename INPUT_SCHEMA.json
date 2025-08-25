@@ -42,11 +42,13 @@
       "default": 4
     },
     "proxy": {
-      "title": "Proxy-Konfiguration",
+      "title": "Proxy configuration",
+      "description": "Configure Apify proxy usage (recommended).",
       "type": "object",
-      "description": "Apify Proxy Optionen (z.B. useApifyProxy, apifyProxyCountry).",
+      "editor": "proxy",
+      "nullable": true,
       "default": {
-        "useApifyProxy": false,
+        "useApifyProxy": true,
         "apifyProxyCountry": "AT"
       }
     },
