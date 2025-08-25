@@ -6,12 +6,76 @@
     "locations": {
       "title": "Bezirke & URLs",
       "type": "array",
+      "description": "Liste von Objekten mit { district, url }. Jede URL ist eine WKO-Suchergebnisseite.",
       "editor": "json",
       "default": [
-        { "district": "bruck-mürzzuschlag", "url": "https://firmen.wko.at/-/bruck-m%C3%BCrzzuschlag_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma=" }
+        {
+          "district": "bruck-mürzzuschlag",
+          "url": "https://firmen.wko.at/-/bruck-m%C3%BCrzzuschlag_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma="
+        },
+        {
+          "district": "weiz",
+          "url": "https://firmen.wko.at/-/weiz_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma="
+        },
+        {
+          "district": "murtal",
+          "url": "https://firmen.wko.at/-/murtal_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma="
+        },
+        {
+          "district": "leoben",
+          "url": "https://firmen.wko.at/-/leoben_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma="
+        },
+        {
+          "district": "murau",
+          "url": "https://firmen.wko.at/-/murau_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma="
+        },
+        {
+          "district": "liezen",
+          "url": "https://firmen.wko.at/-/liezen_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma="
+        }
       ]
     },
-    "maxConcurrency": { "title": "Max Concurrency", "type": "integer", "default": 4 }
+    "maxConcurrency": {
+      "title": "Max Concurrency",
+      "type": "integer",
+      "description": "Maximale gleichzeitige Seitenladungen im PlaywrightCrawler.",
+      "default": 4
+    },
+    "proxy": {
+      "title": "Proxy-Konfiguration",
+      "type": "object",
+      "description": "Apify Proxy Optionen (z.B. useApifyProxy, apifyProxyCountry).",
+      "default": {
+        "useApifyProxy": false,
+        "apifyProxyCountry": "AT"
+      }
+    },
+    "navigationTimeoutSecs": {
+      "title": "Navigation Timeout (Sekunden)",
+      "type": "integer",
+      "description": "Zeitlimit für das Laden einer Seite.",
+      "default": 25
+    },
+    "requestTimeoutSecs": {
+      "title": "Request Handler Timeout (Sekunden)",
+      "type": "integer",
+      "description": "Zeitlimit für den Request-Handler (Parsing usw.).",
+      "default": 45
+    },
+    "slowMoMs": {
+      "title": "SlowMo (Millisekunden)",
+      "type": "integer",
+      "description": "Verlangsamt Browseraktionen zur Anti-Bot-Umgehung.",
+      "default": 0
+    },
+    "respectRobotsTxt": {
+      "title": "robots.txt respektieren",
+      "type": "boolean",
+      "description": "Wenn true, wird das Crawling verlangsamt und robots.txt respektiert.",
+      "default": true
+    }
   },
-  "required": ["locations"]
+  "required": [
+    "locations"
+  ]
 }
