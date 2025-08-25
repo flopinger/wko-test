@@ -6,7 +6,7 @@
     "locations": {
       "title": "Bezirke & URLs",
       "type": "array",
-      "description": "Liste von Objekten mit { district, url }. Jede URL ist eine WKO-Suchergebnisseite.",
+      "description": "Liste von Objekten mit { district, url } für die Bezirks-Suchergebnisseiten der WKO.",
       "editor": "json",
       "default": [
         {
@@ -38,12 +38,12 @@
     "maxConcurrency": {
       "title": "Max Concurrency",
       "type": "integer",
-      "description": "Gleichzeitige Tabs.",
+      "description": "Maximale Anzahl gleichzeitiger Tabs (PlaywrightCrawler).",
       "default": 4
     },
     "proxy": {
       "title": "Proxy configuration",
-      "description": "Apify Proxy nutzen oder leer lassen.",
+      "description": "Apify Proxy-Konfiguration. Leer lassen, um ohne Proxy zu laufen.",
       "type": "object",
       "editor": "proxy",
       "default": {}
@@ -51,32 +51,38 @@
     "maxLoadMoreClicks": {
       "title": "Max clicks on 'Mehr laden'",
       "type": "integer",
-      "default": 80
+      "default": 80,
+      "description": "Maximale Anzahl Klicks auf den „Mehr laden“-Button pro Listen-Seite."
     },
     "waitAfterClickMs": {
       "title": "Wait after click (ms)",
       "type": "integer",
-      "default": 900
+      "default": 900,
+      "description": "Wartezeit (in Millisekunden) nach jedem ‚Mehr laden‘-Klick, bevor erneut geprüft wird."
     },
     "maxLoadMoreSecs": {
       "title": "Max Zeit für Load-More (Sekunden)",
       "type": "integer",
-      "default": 90
+      "default": 90,
+      "description": "Zeitbudget (in Sekunden) für das Nachladen der Liste pro Seite."
     },
     "navigationTimeoutSecs": {
       "title": "Navigation Timeout (Sekunden)",
       "type": "integer",
-      "default": 90
+      "default": 90,
+      "description": "Zeitlimit (in Sekunden) für Seiten-Navigationen (page.goto, Klick-Navigationen)."
     },
     "requestHandlerTimeoutSecs": {
       "title": "Request Handler Timeout (Sekunden)",
       "type": "integer",
-      "default": 240
+      "default": 240,
+      "description": "Gesamtes Zeitlimit (in Sekunden) für die Verarbeitung einer Seite inkl. Nachladen."
     },
     "maxRequestRetries": {
       "title": "Max Request Retries",
       "type": "integer",
-      "default": 4
+      "default": 4,
+      "description": "Maximale Anzahl Wiederholungen je Request bei Fehlern/Timeouts."
     }
   },
   "required": [
