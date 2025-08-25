@@ -61,7 +61,7 @@ Actor.main(async () => {
             { district: 'liezen', url: 'https://firmen.wko.at/-/liezen_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma=' }
         ],
         maxConcurrency = 4,
-        proxy = { useApifyProxy: true, apifyProxyCountry: 'AT' }
+        proxy = null
     } = input;
 
     const requestQueue = await RequestQueue.open();
@@ -69,10 +69,20 @@ Actor.main(async () => {
         await requestQueue.addRequest({ url: loc.url, userData: { label: 'LIST', district: loc.district } });
     }
 
+    // Optional proxy configuration (graceful fallback)
+    let proxyConfiguration = null;
+    try {
+        if (proxy && (proxy.useApifyProxy || (proxy.proxyUrls && proxy.proxyUrls.length))) {
+            proxyConfiguration = await Actor.createProxyConfiguration(proxy);
+        }
+    } catch (e) {
+        log.warning(`Proxy init failed (${e?.message}). Falling back to NO PROXY.`);
+    }
+
     const crawler = new PlaywrightCrawler({
         requestQueue,
         maxConcurrency,
-        proxyConfiguration: await Actor.createProxyConfiguration(proxy),
+        proxyConfiguration,
         headless: true,
         requestHandler: async ({ request, page }) => {
             const companies = await parseCompanyCards({ request, page });
