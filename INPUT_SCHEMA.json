@@ -38,12 +38,12 @@
     "maxConcurrency": {
       "title": "Max Concurrency",
       "type": "integer",
-      "description": "Maximale gleichzeitige Seitenladungen im PlaywrightCrawler.",
+      "description": "Gleichzeitige Tabs.",
       "default": 4
     },
     "proxy": {
       "title": "Proxy configuration",
-      "description": "Apify Proxy nutzen oder leer lassen. Land nur setzen, wenn verfügbar.",
+      "description": "Apify Proxy nutzen oder leer lassen.",
       "type": "object",
       "editor": "proxy",
       "default": {}
@@ -51,14 +51,32 @@
     "maxLoadMoreClicks": {
       "title": "Max clicks on 'Mehr laden'",
       "type": "integer",
-      "description": "Obergrenze für Klicks auf den Load-More Button.",
-      "default": 60
+      "default": 80
     },
     "waitAfterClickMs": {
       "title": "Wait after click (ms)",
       "type": "integer",
-      "description": "Wartezeit nach jedem Klick, bis neue Items geladen sind.",
       "default": 900
+    },
+    "maxLoadMoreSecs": {
+      "title": "Max Zeit für Load-More (Sekunden)",
+      "type": "integer",
+      "default": 90
+    },
+    "navigationTimeoutSecs": {
+      "title": "Navigation Timeout (Sekunden)",
+      "type": "integer",
+      "default": 90
+    },
+    "requestHandlerTimeoutSecs": {
+      "title": "Request Handler Timeout (Sekunden)",
+      "type": "integer",
+      "default": 240
+    },
+    "maxRequestRetries": {
+      "title": "Max Request Retries",
+      "type": "integer",
+      "default": 4
     }
   },
   "required": [

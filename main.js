@@ -5,7 +5,44 @@ const { PlaywrightCrawler } = require('crawlee');
 const clean = (t = '') => (t || '').replace(/\s+/g, ' ').trim();
 const toAbs = (base, href) => { try { return new URL(href, base).toString(); } catch { return href || ''; } };
 
-/** Klickt wiederholt auf „Mehr laden“, bis Ende erreicht. */
+/** Consent/Resource helpers */
+async function dismissConsents(page) {
+  const selectors = [
+    'button:has-text("Akzeptieren")',
+    'button:has-text("Alle akzeptieren")',
+    'button:has-text("Einverstanden")',
+    '[aria-label*=akzept i]',
+    '#onetrust-accept-btn-handler'
+  ];
+  for (const sel of selectors) {
+    try {
+      const loc = page.locator(sel).first();
+      if (await loc.count()) {
+        await loc.click({ delay: 30 }).catch(() => {});
+      }
+    } catch {}
+  }
+}
+async function enableResourceBlocking(page) {
+  await page.route('**/*', (route) => {
+    const url = route.request().url();
+    if (/\.(png|jpe?g|webp|gif|svg|ico)(\?|$)/i.test(url)) return route.abort();
+    if (/\.(woff2?|ttf|eot)(\?|$)/i.test(url)) return route.abort();
+    if (/\.(mp4|webm|m3u8|mp3|ogg|avi|mov)(\?|$)/i.test(url)) return route.abort();
+    return route.continue();
+  });
+}
+
+async function getResultsCount(page) {
+  return page.evaluate(() => {
+    const sels = ['.result-item', '.company-list .item', 'li.search-result', 'li.result', '[data-company]'];
+    const set = new Set();
+    for (const sel of sels) document.querySelectorAll(sel).forEach(el => set.add(el));
+    return set.size;
+  });
+}
+
+/** Load-more loop with progress + time budget */
 async function clickLoadMoreUntilDone(page, {
   buttonSelectors = [
     'button:has-text("Mehr laden")',
@@ -16,53 +53,72 @@ async function clickLoadMoreUntilDone(page, {
     'button:has-text("Weitere")',
     'a:has-text("Weitere")'
   ],
-  maxClicks = 60,
+  maxClicks = 80,
   waitAfterClickMs = 900,
+  maxTotalMs = 90000,
 } = {}) {
+  const start = Date.now();
   let clicks = 0;
-  while (clicks < maxClicks) {
+  let stableRounds = 0;
+  let prevCount = await getResultsCount(page);
+
+  while (clicks < maxClicks && (Date.now() - start) < maxTotalMs) {
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(250);
+
     let btnHandle = null;
     for (const sel of buttonSelectors) {
       try {
-        const h = await page.locator(sel).first().elementHandle();
-        if (h) { btnHandle = h; break; }
+        const loc = page.locator(sel).first();
+        if (await loc.count()) {
+          btnHandle = await loc.elementHandle();
+          break;
+        }
       } catch {}
     }
     if (!btnHandle) break;
+
     const disabled = await page.evaluate(el => el.disabled || el.getAttribute('aria-disabled') === 'true', btnHandle);
     const box = await btnHandle.boundingBox();
     if (!box || disabled) break;
+
     try { await btnHandle.scrollIntoViewIfNeeded?.(); } catch {}
-    await btnHandle.click({ delay: 50 }).catch(() => {});
+    await btnHandle.click({ delay: 40 }).catch(() => {});
     clicks += 1;
-    await Promise.race([
-      page.waitForLoadState('networkidle', { timeout: waitAfterClickMs }).catch(() => {}),
-      page.waitForTimeout(waitAfterClickMs),
-    ]);
+
+    const waitUntil = Date.now() + Math.max(600, waitAfterClickMs);
+    let increased = false;
+    while (Date.now() < waitUntil) {
+      await page.waitForTimeout(200);
+      const now = await getResultsCount(page);
+      if (now > prevCount) { increased = true; prevCount = now; break; }
+    }
+    if (!increased) {
+      stableRounds += 1;
+      if (stableRounds >= 2) break;
+    } else {
+      stableRounds = 0;
+    }
   }
   return clicks;
 }
 
 function splitAddress(addressText) {
   const full = clean(String(addressText || '').replace(/\s*\n\s*/g, ', '));
-  // Try "<street + houseno>, <zip> <city>"
-  const m = full.match(/^(.*?)(?:,\s*)?(\d{4,5})\s+(.+)$/);
+  // Pattern: "<street [houseno]>, <zip> <city>"
+  const m = full.match(/^(.*?)(?:,\s*)?(\b\d{4,5}\b)\s+(.+)$/);
   let left = full, zip = '', city = '';
   if (m) { left = m[1]; zip = m[2]; city = m[3]; }
-  // Extract house number as last token resembling number
+  // Austrian house no: 12, 12a, 12-14, 12/3
   const m2 = left.match(/^(.*?)(?:\s+(\d+[A-Za-z0-9\/-]*))?$/);
   const street = clean(m2 ? m2[1] : left);
   const houseNumber = clean(m2 && m2[2] ? m2[2] : '');
   return { address_full: full, street, house_number: houseNumber, zip, city };
 }
 
-/** Listenseite: Firmenkarten parsen und Detail-URL finden. */
 async function parseCompanyCards({ request, page }) {
   const sourceUrl = request.url;
   const district = request.userData.district || null;
-  await page.waitForSelector('body', { timeout: 15000 });
 
   const items = await page.$$eval('body', (bodyEls) => {
     const body = bodyEls[0] || document.body;
@@ -78,7 +134,6 @@ async function parseCompanyCards({ request, page }) {
       const emailNode = pick(el, ['a[href^="mailto:"]','.email','[itemprop="email"]']);
       const websiteNode = pick(el, ['a[href^="http"]','a.external','[itemprop="url"]']);
       const detailLinkNode = Array.from(el.querySelectorAll('a')).find((a) => (a.getAttribute('href') || '').includes('/firma/'));
-
       return {
         name: nameNode ? nameNode.textContent.trim() : '',
         address: addressNode ? addressNode.textContent.trim() : '',
@@ -103,17 +158,12 @@ async function parseCompanyCards({ request, page }) {
   }));
 }
 
-/** Detailseite: Firmenbuchnummer, Gericht, GLN, GISA-Zahlen + ggf. bessere Adresse auslesen. */
 async function parseDetailPage({ page }) {
-  await page.waitForSelector('body', { timeout: 15000 });
-
   const data = await page.$$eval('body', (bodyEls) => {
     const root = bodyEls[0] || document.body;
     const txt = (el) => (el ? (el.textContent || '').replace(/\s+/g, ' ').trim() : '');
-
-    function getByLabels(labels) {
+    const getByLabels = (labels) => {
       labels = labels.map((l) => l.toLowerCase());
-      // Try definition lists / tables first
       const rows = Array.from(root.querySelectorAll('tr, dl, .field, .row'));
       for (const row of rows) {
         const keyEl = row.querySelector('th, dt, .label, .field-label, .key, strong');
@@ -122,12 +172,10 @@ async function parseDetailPage({ page }) {
           return txt(valEl) || txt(keyEl.nextElementSibling);
         }
       }
-      // Generic scan
       const nodes = Array.from(root.querySelectorAll('*, *:before, *:after'));
       for (const n of nodes) {
         const t = txt(n).toLowerCase();
         if (labels.some((l) => t.includes(l))) {
-          // Prefer next sibling or parent sibling
           const sib = n.nextElementSibling;
           if (sib) return txt(sib);
           if (n.parentElement) {
@@ -137,12 +185,9 @@ async function parseDetailPage({ page }) {
         }
       }
       return '';
-    }
-
-    function getAllGisa() {
-      const labels = ['gisa'];
+    };
+    const getAllGisa = () => {
       const texts = [];
-      // Collect explicit labeled values
       const rows = Array.from(root.querySelectorAll('tr, dl, .field, .row, p, li'));
       for (const row of rows) {
         const label = row.querySelector('th, dt, .label, .field-label, strong');
@@ -151,15 +196,12 @@ async function parseDetailPage({ page }) {
           texts.push((val ? val.textContent : row.textContent) || '');
         }
       }
-      // Links mentioning GISA
       texts.push(...Array.from(root.querySelectorAll('a')).filter(a => (a.textContent || '').toLowerCase().includes('gisa') || (a.getAttribute('href') || '').toLowerCase().includes('gisa')).map(a => a.textContent || a.href));
-      // Extract numbers
       const joined = texts.join(' ');
       const nums = (joined.match(/\b\d{4,}\b/g) || []).filter((v, i, arr) => arr.indexOf(v) === i);
       return nums;
-    }
+    };
 
-    // Address (prefer structured blocks)
     let addressText = '';
     const addrCandidates = Array.from(root.querySelectorAll('[itemprop="address"], .address, .adr, address, .company-address, .standort-adresse'));
     if (addrCandidates.length) addressText = addrCandidates.map((el) => (el.textContent || '').replace(/\s+/g, ' ').trim()).join(', ');
@@ -169,7 +211,7 @@ async function parseDetailPage({ page }) {
       court: getByLabels(['firmengericht', 'gericht']),
       gln: getByLabels(['gln']),
       gisaNumbers: getAllGisa(),
-      addressText: addressText,
+      addressText,
       pageTitle: document.title || ''
     };
   });
@@ -197,16 +239,24 @@ Actor.main(async () => {
     ],
     maxConcurrency = 4,
     proxy = {},
-    maxLoadMoreClicks = 60,
-    waitAfterClickMs = 900
+    maxLoadMoreClicks = 80,
+    waitAfterClickMs = 900,
+    maxLoadMoreSecs = 90,
+    navigationTimeoutSecs = 90,
+    requestHandlerTimeoutSecs = 240,
+    maxRequestRetries = 4
   } = input;
+
+  // Ensure timeouts are applied (env overrides as fallback)
+  if (requestHandlerTimeoutSecs) process.env.CRAWLEE_REQUEST_HANDLER_TIMEOUT_SECS = String(requestHandlerTimeoutSecs);
+  if (navigationTimeoutSecs) process.env.CRAWLEE_NAVIGATION_TIMEOUT_SECS = String(navigationTimeoutSecs);
+  log.info(`Timeouts -> handler: ${process.env.CRAWLEE_REQUEST_HANDLER_TIMEOUT_SECS}s, nav: ${process.env.CRAWLEE_NAVIGATION_TIMEOUT_SECS}s`);
 
   const requestQueue = await RequestQueue.open();
   for (const loc of locations) {
     await requestQueue.addRequest({ url: loc.url, userData: { label: 'LIST', district: loc.district, listUrl: loc.url } });
   }
 
-  // Optional proxy config
   let proxyConfiguration;
   try {
     if (proxy && (proxy.useApifyProxy || (proxy.proxyUrls && proxy.proxyUrls.length))) {
@@ -220,33 +270,34 @@ Actor.main(async () => {
     requestQueue,
     maxConcurrency,
     headless: true,
-    requestHandler: async ({ request, page, enqueueLinks }) => {
+    navigationTimeoutSecs,
+    requestHandlerTimeoutSecs,
+    maxRequestRetries,
+    preNavigationHooks: [ async ({ page }) => { await enableResourceBlocking(page); await dismissConsents(page); } ],
+    requestHandler: async ({ request, page }) => {
       const { label } = request.userData || {};
       if (label === 'LIST') {
-        await clickLoadMoreUntilDone(page, { maxClicks: maxLoadMoreClicks, waitAfterClickMs });
+        await page.waitForSelector('body', { timeout: 15000 });
+        await clickLoadMoreUntilDone(page, {
+          maxClicks: maxLoadMoreClicks,
+          waitAfterClickMs,
+          maxTotalMs: Math.max(30000, maxLoadMoreSecs * 1000),
+        });
         const companies = await parseCompanyCards({ request, page });
-
-        // Enqueue DETAILS
         for (const c of companies) {
           if (c.detailUrl) {
-            await requestQueue.addRequest({
-              url: c.detailUrl,
-              userData: { label: 'DETAIL', base: c, district: c.district, listUrl: c.sourceUrl }
-            });
+            await requestQueue.addRequest({ url: c.detailUrl, userData: { label: 'DETAIL', base: c, district: c.district, listUrl: c.sourceUrl } });
           } else {
-            // Kein Detail-Link -> sofort schreiben (mit Address-Splitting)
             const addr = splitAddress(c.address);
             await Dataset.pushData({ ...c, ...addr, gisa_numbers: [], gisa_numbers_str: '' });
           }
         }
       } else if (label === 'DETAIL') {
+        await dismissConsents(page);
         const base = request.userData.base || {};
         const detail = await parseDetailPage({ page });
-
-        // Wähle beste Adresse (Detail bevorzugen, wenn vorhanden)
         const addressCandidate = detail.addressText || base.address || '';
         const addr = splitAddress(addressCandidate);
-
         const out = {
           district: base.district || request.userData.district || null,
           sourceUrl: base.sourceUrl || request.userData.listUrl || null,
@@ -267,10 +318,7 @@ Actor.main(async () => {
           gisa_numbers_str: (detail.gisa_numbers || []).join('; '),
           _ts: new Date().toISOString(),
         };
-
         await Dataset.pushData(out);
-      } else {
-        log.warning(`Unknown label: ${label}`);
       }
     },
     failedRequestHandler: async ({ request }) => {
