@@ -1,13 +1,14 @@
 {
   "name": "wko-scraper",
-  "version": "1.0.0",
-  "description": "Scraper für WKO Firmenverzeichnisse.",
+  "version": "1.2.0",
+  "description": "Scraper für WKO Firmenverzeichnisse inkl. Detailseiten (Firmenbuchnummer, Firmengericht, GLN, GISA).",
   "type": "commonjs",
   "scripts": {
-    "start": "node main.js"
+    "start": "node main.js",
+    "test-run": "APIFY_LOCAL_STORAGE_DIR=./storage node main.js"
   },
   "dependencies": {
     "apify": "^3.4.4",
-    "crawlee": "^3.14.0"
+    "crawlee": "^3.14.1"
   }
 }

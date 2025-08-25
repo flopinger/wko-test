@@ -43,34 +43,22 @@
     },
     "proxy": {
       "title": "Proxy configuration",
-      "description": "Use Apify proxy or leave empty to run without one.",
+      "description": "Apify Proxy nutzen oder leer lassen. Land nur setzen, wenn verfügbar.",
       "type": "object",
       "editor": "proxy",
       "default": {}
     },
-    "navigationTimeoutSecs": {
-      "title": "Navigation Timeout (Sekunden)",
+    "maxLoadMoreClicks": {
+      "title": "Max clicks on 'Mehr laden'",
       "type": "integer",
-      "description": "Zeitlimit für das Laden einer Seite.",
-      "default": 25
+      "description": "Obergrenze für Klicks auf den Load-More Button.",
+      "default": 60
     },
-    "requestTimeoutSecs": {
-      "title": "Request Handler Timeout (Sekunden)",
+    "waitAfterClickMs": {
+      "title": "Wait after click (ms)",
       "type": "integer",
-      "description": "Zeitlimit für den Request-Handler (Parsing usw.).",
-      "default": 45
-    },
-    "slowMoMs": {
-      "title": "SlowMo (Millisekunden)",
-      "type": "integer",
-      "description": "Verlangsamt Browseraktionen zur Anti-Bot-Umgehung.",
-      "default": 0
-    },
-    "respectRobotsTxt": {
-      "title": "robots.txt respektieren",
-      "type": "boolean",
-      "description": "Wenn true, wird das Crawling verlangsamt und robots.txt respektiert.",
-      "default": true
+      "description": "Wartezeit nach jedem Klick, bis neue Items geladen sind.",
+      "default": 900
     }
   },
   "required": [
