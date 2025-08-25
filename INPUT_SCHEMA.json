@@ -43,11 +43,10 @@
     },
     "proxy": {
       "title": "Proxy configuration",
-      "description": "Leave empty to run without proxy, or enable Apify Proxy. Country may be omitted if pool is unavailable.",
+      "description": "Use Apify proxy or leave empty to run without one.",
       "type": "object",
       "editor": "proxy",
-      "nullable": true,
-      "default": null
+      "default": {}
     },
     "navigationTimeoutSecs": {
       "title": "Navigation Timeout (Sekunden)",
