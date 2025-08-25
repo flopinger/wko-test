@@ -1,13 +1,6 @@
-# WKO Firmen Scraper – Details + robust
+# WKO Firmen Scraper – robuste Detail-Links
 
-- Listen + „Mehr laden“ bis Ende (Zeit/Klick-Limit, Fortschrittserkennung)
-- Detailseiten: **Firmenbuchnummer**, **Firmengericht**, **GLN**, **GISA-Zahlen**
-- Adresse: **Straße**, **Hausnummer**, **PLZ**, **Ort**
-- Ressourcen-Blocking & Consent-Dismiss für Stabilität
-- Hohe Timeouts + Retries, zusätzlich ENV-Overrides
-
-## Lokal
-```
-npm i
-APIFY_LOCAL_STORAGE_DIR=./storage node main.js
-```
+- Nach Listen-Seite: Enqueue aller `a[href*="/firma/"]` (robust, unabhängig von Kartenstruktur)
+- Danach Detailseiten-Parsing: **Firmenbuchnummer**, **Firmengericht**, **GLN**, **GISA**
+- Adresse wird in **Straße**, **Hausnummer**, **PLZ**, **Ort** zerlegt
+- Load-More mit Zeit-/Klicklimit, Consent-Dismiss, Resource-Blocking
