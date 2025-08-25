@@ -1,4 +1,10 @@
-// main.js
+/
+
+    // If proxyConfiguration was created, attach it; otherwise leave it undefined
+    if (typeof proxyConfiguration !== 'undefined' && proxyConfiguration) {
+        crawlerOptions.proxyConfiguration = proxyConfiguration;
+    }
+/ main.js
 const { Actor, log, Dataset, RequestQueue } = require('apify');
 const { PlaywrightCrawler } = require('crawlee');
 
@@ -79,10 +85,10 @@ Actor.main(async () => {
         log.warning(`Proxy init failed (${e?.message}). Falling back to NO PROXY.`);
     }
 
-    const crawler = new PlaywrightCrawler({
+    const crawlerOptions = {
         requestQueue,
         maxConcurrency,
-        proxyConfiguration,
+        // proxyConfiguration will be injected below if defined
         headless: true,
         requestHandler: async ({ request, page }) => {
             const companies = await parseCompanyCards({ request, page });
@@ -92,6 +98,8 @@ Actor.main(async () => {
             await Dataset.pushData({ _error: true, url: request.url, district: request.userData?.district });
         }
     });
+
+    const crawler = new PlaywrightCrawler(crawlerOptions);
 
     await crawler.run();
     log.info('Done.');
