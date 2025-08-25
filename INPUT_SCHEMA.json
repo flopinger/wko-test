@@ -1,0 +1,17 @@
+{
+  "title": "WKO Scraper Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "locations": {
+      "title": "Bezirke & URLs",
+      "type": "array",
+      "editor": "json",
+      "default": [
+        { "district": "bruck-mürzzuschlag", "url": "https://firmen.wko.at/-/bruck-m%C3%BCrzzuschlag_bezirk/?branche=44981&branchenname=kraftfahrzeugtechnik&firma=" }
+      ]
+    },
+    "maxConcurrency": { "title": "Max Concurrency", "type": "integer", "default": 4 }
+  },
+  "required": ["locations"]
+}
